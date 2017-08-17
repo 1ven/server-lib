@@ -7,6 +7,7 @@ export type Response = {
   headers?: Record<string, string>;
 };
 
+export { default as empty } from "./empty";
 export { default as simple } from "./simple";
 export { default as json } from "./json";
 export { default as html } from "./html";
