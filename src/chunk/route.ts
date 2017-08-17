@@ -1,5 +1,5 @@
 import * as UrlPattern from "url-pattern";
-import { compose, replace, omit } from "ramda";
+import { curry, compose, replace, omit } from "ramda";
 import { symbol } from "./";
 import { Request } from "../request";
 import { Response } from "../response";
@@ -11,17 +11,19 @@ export type Matched = {
   rest?: string;
 };
 
-export type RouteChunk = (req: RouteRequest) => Response;
+export type RouteChunk = (req: RouteRequest) => Promise<Response>;
 
-export default (template: string, chunk: RouteChunk) => (req: RouteRequest) => {
-  const matched = match(prettifyTemplate(template), req);
+export default curry(
+  (template: string, chunk: RouteChunk) => (req: RouteRequest) => {
+    const matched = match(prettifyTemplate(template), req);
 
-  if (matched) {
-    return chunk({ ...req, ...matched });
+    if (matched) {
+      return chunk({ ...req, ...matched });
+    }
+
+    throw symbol;
   }
-
-  throw symbol;
-};
+);
 
 const prettifyTemplate = (t: string) => t.replace(/^\/?(.*?)\/?$/g, "/$1");
 
