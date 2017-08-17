@@ -15,7 +15,7 @@ export type RouteChunk = (req: RouteRequest) => Promise<Response>;
 
 export default curry(
   (template: string, chunk: RouteChunk) => (req: RouteRequest) => {
-    const matched = match(prettifyTemplate(template), req);
+    const matched = match(template, req);
 
     if (matched) {
       return chunk({ ...req, ...matched });
@@ -25,13 +25,17 @@ export default curry(
   }
 );
 
-const prettifyTemplate = (t: string) => t.replace(/^\/?(.*?)\/?$/g, "/$1");
+const withOnlyLeadingSlash = (s: string) => s.replace(/^\/?(.*?)\/*?$/, "/$1");
+const withoutTrailingSlash = (s: string) => s.replace(/^(.+?)\/*?$/, "$1")
 
 const match = (template: string, req: RouteRequest) => {
-  const result = new UrlPattern(template).match(req.rest || req.uri);
+  const result = new UrlPattern(withOnlyLeadingSlash(template)).match(
+    withoutTrailingSlash(req.rest || req.uri)
+  );
+
   return result
     ? {
-        rest: result._,
+        rest: result._ || '/',
         params: { ...omit(["_"], result), ...req.params }
       }
     : void 0;
