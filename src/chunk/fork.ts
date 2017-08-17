@@ -1,8 +1,12 @@
 import { Chunk, symbol } from "./";
 import { Request } from "../request";
-import { Response } from "../response";
+import { Response, simple, withStatus } from "../response";
 
-export default (...chunks: Chunk[]) => (req: Request) => {
+const notFoundResponse = withStatus(404)(simple());
+
+export const makeFork = (notFound: Response = notFoundResponse) => (
+  ...chunks: Chunk[]
+) => (req: Request) => {
   for (let chunk of chunks) {
     try {
       return chunk(req);
@@ -13,5 +17,7 @@ export default (...chunks: Chunk[]) => (req: Request) => {
     }
   }
 
-  throw symbol;
+  return notFound;
 };
+
+export default makeFork();
