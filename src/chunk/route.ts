@@ -1,42 +1,45 @@
 import * as UrlPattern from "url-pattern";
-import { curry, compose, replace, omit } from "ramda";
-import { symbol } from "./";
+import { curry, compose, replace, omit, mergeDeepLeft } from "ramda";
+import { symbol as forkSymbol } from "./";
 import { Request } from "../request";
 import { Response } from "../response";
 
-export type RouteRequest = Request & Matched;
-
 export type Matched = {
   params?: Record<string, string>;
-  rest?: string;
+  rest: string;
 };
 
-export type RouteChunk = (req: RouteRequest) => Promise<Response>;
+export type RouteChunk = (req: Request & Matched) => Promise<Response>;
+export type RouteRequest = Request & Matched;
+export const isRouteRequest = (arg): arg is RouteRequest => Boolean(arg.rest);
 
 export default curry(
-  (template: string, chunk: RouteChunk) => (req: RouteRequest) => {
-    const matched = match(template, req);
+  (template: string, chunk: RouteChunk) => (req: RouteRequest | Request) => {
+    const matched = isRouteRequest(req)
+      ? match(template, req.rest)
+      : match(template, req.uri);
 
     if (matched) {
-      return chunk({ ...req, ...matched });
+      return chunk(mergeDeepLeft(matched, req));
     }
 
-    throw symbol;
+    throw forkSymbol;
   }
 );
 
+// TODO: cut multiple leading slashes
 const withOnlyLeadingSlash = (s: string) => s.replace(/^\/?(.*?)\/*?$/, "/$1");
-const withoutTrailingSlash = (s: string) => s.replace(/^(.+?)\/*?$/, "$1")
+const handleRest = (_?:string) => _ === "" ? "/" : typeof _ === "undefined" ? "" : _;
 
-const match = (template: string, req: RouteRequest) => {
+const match = (template: string, uri: string) => {
+  if (uri === '') return null;
+
   const result = new UrlPattern(withOnlyLeadingSlash(template)).match(
-    withoutTrailingSlash(req.rest || req.uri)
+    withOnlyLeadingSlash(uri)
   );
 
-  return result
-    ? {
-        rest: result._ || '/',
-        params: { ...omit(["_"], result), ...req.params }
-      }
-    : void 0;
+  return result && {
+    rest: handleRest(result._),
+    params: omit(["_"], result)
+  }
 };
