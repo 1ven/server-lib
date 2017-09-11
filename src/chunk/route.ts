@@ -29,17 +29,20 @@ export default curry(
 
 // TODO: cut multiple leading slashes
 const withOnlyLeadingSlash = (s: string) => s.replace(/^\/?(.*?)\/*?$/, "/$1");
-const handleRest = (_?:string) => _ === "" ? "/" : typeof _ === "undefined" ? "" : _;
+const handleRest = (_?: string) =>
+  _ === "" ? "/" : typeof _ === "undefined" ? "" : withOnlyLeadingSlash(_);
 
 const match = (template: string, uri: string) => {
-  if (uri === '') return null;
+  if (uri === "") return null;
 
   const result = new UrlPattern(withOnlyLeadingSlash(template)).match(
     withOnlyLeadingSlash(uri)
   );
 
-  return result && {
-    rest: handleRest(result._),
-    params: omit(["_"], result)
-  }
+  return (
+    result && {
+      rest: handleRest(result._),
+      params: omit(["_"], result)
+    }
+  );
 };
